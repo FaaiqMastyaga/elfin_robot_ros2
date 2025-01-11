@@ -144,7 +144,13 @@ void ElfinMotionAPI::trajectoryScaling(moveit_msgs::msg::RobotTrajectory &trajec
     }
     for(unsigned int i=0; i<trajectory.joint_trajectory.points.size(); i++)
     {
-        trajectory.joint_trajectory.points[i].time_from_start.sec *= (1.0/scale);
+        // 按比例缩放
+        // trajectory.joint_trajectory.points[i].time_from_start.sec *= (1.0/scale);
+        uint64_t total_nanoseconds = (uint64_t)trajectory.joint_trajectory.points[i].time_from_start.sec * 1000000000 + 
+                                            trajectory.joint_trajectory.points[i].time_from_start.nanosec;
+        uint64_t scaled_total_nanoseconds = (uint64_t)(total_nanoseconds * (1.0/scale));
+        trajectory.joint_trajectory.points[i].time_from_start.sec = (int32_t)(scaled_total_nanoseconds / 1000000000); 
+        trajectory.joint_trajectory.points[i].time_from_start.nanosec = (uint32_t)(scaled_total_nanoseconds % 1000000000); 
         for(unsigned int j=0; j<trajectory.joint_trajectory.points[i].velocities.size(); j++)
         {
             trajectory.joint_trajectory.points[i].velocities[j]*=scale;
@@ -191,7 +197,7 @@ void ElfinMotionAPI::cartPathGoalCB(const geometry_msgs::msg::PoseArray::SharedP
         pose_goal[i] = tf2::toMsg(affine_goal_tmp);
     }
 
-    double fraction=group_->computeCartesianPath(pose_goal, 0.01, 1.5, cart_path);
+    double fraction=group_->computeCartesianPath(pose_goal, 0.01, 0.0, cart_path);
 
     if(fraction==-1)
     {
