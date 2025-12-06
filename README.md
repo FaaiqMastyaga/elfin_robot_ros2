@@ -53,7 +53,7 @@ Make sure to source the correct setup file according to your workspace hierarchy
 Assuming your catkin workspace folder is ~/catkin_ws, you should use the following commands:
 ```sh
 $ cd ~/catkin_ws/src
-$ git clone -b humble_ethercat https://github.com/hans-robot/elfin_robot_ros2.git
+$ git clone -b humble_ethercat https://github.com/huayan-robotics/elfin_robot_ros2.git
 $ cd ..
 $ colcon build
 $ source install/setup.bash
