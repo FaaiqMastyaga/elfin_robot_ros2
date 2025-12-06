@@ -45,7 +45,7 @@ $ sudo apt-get install ros-foxy-moveit
 假设你的工作空间是~/catkin_ws，你需要运行的命令如下：
 ```sh
 $ cd ~/catkin_ws/src
-$ git clone -b foxy_ethercat https://github.com/hans-robot/elfin_robot_ros2.git
+$ git clone -b foxy_ethercat https://github.com/huayan-robotics/elfin_robot_ros2.git
 $ cd ..
 $ colcon build
 $ source install/setup.bash
