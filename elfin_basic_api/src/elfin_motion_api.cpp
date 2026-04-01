@@ -79,6 +79,7 @@ ElfinMotionAPI::ElfinMotionAPI(const rclcpp::Node::SharedPtr& node,moveit::plann
 
     default_tip_link_=group_->getEndEffectorLink();
     root_link_=group_->getPlanningFrame();
+    root_link_ = "elfin_base_link";
 
     tfBuffer =
       std::make_unique<tf2_ros::Buffer>(motion_nh_->get_clock());
