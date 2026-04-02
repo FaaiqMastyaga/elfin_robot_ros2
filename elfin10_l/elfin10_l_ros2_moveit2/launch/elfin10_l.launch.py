@@ -266,6 +266,24 @@ def generate_launch_description():
         condition=UnlessCondition(load_RVIZfile),
     )
 
+    servo_yaml = load_yaml(
+        'elfin10_l_ros2_moveit2', 'config/elfin_servo.yaml'
+    )
+    servo_params = {'moveit_servo': servo_yaml}
+
+    servo_node = Node(
+        package='moveit_servo',
+        executable='servo_node_main',
+        parameters=[
+            servo_params,
+            robot_description,
+            robot_description_semantic,
+            robot_description_kinematics,
+            {'use_sim_time': True},
+        ],
+        output='screen',
+    )
+
     return LaunchDescription(
         [
             # Gazebo nodes:
@@ -288,6 +306,7 @@ def generate_launch_description():
                         declare_use_sim_time_cmd,
                         rviz_node_full,
                         run_move_group_node,
+                        servo_node
 
                     ]
                 )
