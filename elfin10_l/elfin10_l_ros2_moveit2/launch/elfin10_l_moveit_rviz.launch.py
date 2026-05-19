@@ -126,6 +126,24 @@ def generate_launch_description():
         ],
     )
 
+    servo_yaml = load_yaml(
+        'elfin10_l_ros2_moveit2', 'config/elfin_servo.yaml'
+    )
+    servo_params = {'moveit_servo': servo_yaml}
+
+    servo_node = Node(
+        package='moveit_servo',
+        executable='servo_node_main',
+        parameters=[
+            servo_params,
+            robot_description,
+            robot_description_semantic,
+            robot_description_kinematics,
+            {'use_sim_time': False},
+        ],
+        output='screen',
+    )
+
     # Rviz
     load_rviz = LaunchConfiguration("rviz_file")
     rviz_base = os.path.join(get_package_share_directory("elfin10_l_ros2_moveit2"),"launch")
@@ -214,6 +232,7 @@ def generate_launch_description():
             rviz_arg,
             rviz_node_full,
             run_move_group_node,
+            servo_node,
             elfin_controller_spawner,
             joint_state_spawner
 
