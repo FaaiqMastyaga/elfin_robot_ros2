@@ -450,16 +450,36 @@
       xyz="0 0 0" />
   </joint>
 
- <link name="elfin_dummy_gripper"/>
+  <link name="marker_holder_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="file://$(find surface_tracking_visualization)/meshes/marker_holder.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="white">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="file://$(find surface_tracking_visualization)/meshes/marker_holder.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="flange_to_holder_joint" type="fixed">
+    <parent link="elfin_end_link" />
+    <child link="marker_holder_link" />
+    <origin xyz="0 0 0" rpy="0 0 -1.16937" />
+  </joint>
+
+  <link name="pen_tip_link"/>
   
-  <joint name="elfin_dummy_joint" type="fixed">
-    <origin
-      xyz="0 0.109 0"
-      rpy="-1.5708 -1.5708 0" />
-    <parent
-      link="elfin_link6" />
-    <child
-      link="elfin_dummy_gripper" />
+  <joint name="holder_to_pen_tip_joint" type="fixed">
+    <parent link="marker_holder_link" />
+    <child link="pen_tip_link" />
+    <origin xyz="0 0 0.15" rpy="0 0 0" /> 
   </joint>
 
 </robot>
