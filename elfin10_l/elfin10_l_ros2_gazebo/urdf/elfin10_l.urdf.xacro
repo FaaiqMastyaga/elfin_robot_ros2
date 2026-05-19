@@ -142,7 +142,7 @@
       lower="-3.14"
       upper="3.14"
       effort="420"
-      velocity="1.57" />
+      velocity="1.7453" />
   </joint>
   <link
     name="elfin_link2">
@@ -200,7 +200,7 @@
       lower="-2.35"
       upper="2.35"
       effort="420"
-      velocity="1.57" />
+      velocity="1.7453" />
   </joint>
   <link
     name="elfin_link3">
@@ -258,7 +258,7 @@
       lower="-2.61"
       upper="2.61"
       effort="200"
-      velocity="1.57" />
+      velocity="2.618" />
   </joint>
   <link
     name="elfin_link4">
@@ -316,7 +316,7 @@
       lower="-3.14"
       upper="3.14"
       effort="200"
-      velocity="1.57" />
+      velocity="2.618" />
   </joint>
   <link
     name="elfin_link5">
@@ -374,7 +374,7 @@
       lower="-2.56"
       upper="2.56"
       effort="69"
-      velocity="1.57" />
+      velocity="3.14" />
   </joint>
   <link
     name="elfin_link6">
@@ -432,7 +432,7 @@
       lower="-3.14"
       upper="3.14"
       effort="69"
-      velocity="1.57" />
+      velocity="3.14" />
   </joint>
   <link
     name="elfin_end_link"/>
