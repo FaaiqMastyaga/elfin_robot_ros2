@@ -8,9 +8,9 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.substitutions import LaunchConfiguration,Command, FindExecutable, PathJoinSubstitution
+from launch.substitutions import LaunchConfiguration, Command, FindExecutable
 from launch.actions import ExecuteProcess, IncludeLaunchDescription, RegisterEventHandler, DeclareLaunchArgument
-from launch.conditions import IfCondition, UnlessCondition
+from launch.conditions import UnlessCondition
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 import xacro
@@ -24,8 +24,8 @@ def load_file(package_name, file_path):
         with open(absolute_file_path, 'r') as file:
             return file.read()
     except EnvironmentError:
-
         return None
+
 # LOAD YAML:
 def load_yaml(package_name, file_path):
     package_path = get_package_share_directory(package_name)
@@ -37,7 +37,6 @@ def load_yaml(package_name, file_path):
         return None
 
 def generate_launch_description():
-
     
     # *********************** Gazebo *********************** # 
     
@@ -46,11 +45,21 @@ def generate_launch_description():
         get_package_share_directory('elfin10_l_ros2_gazebo'),
         'worlds',
         'elfin10_l.world')
+        
+    # DECLARE Gazebo Params file (Fixes 10Hz MoveIt Servo Issue):
+    gazebo_params_file = os.path.join(
+        get_package_share_directory('elfin10_l_ros2_gazebo'),
+        'config',
+        'gazebo_params.yaml')
+
     # DECLARE Gazebo LAUNCH file:
     gazebo = IncludeLaunchDescription(
                 PythonLaunchDescriptionSource([os.path.join(
                     get_package_share_directory('gazebo_ros'), 'launch'), '/gazebo.launch.py']),
-                launch_arguments={'world': elfin10_l_ros2_gazebo}.items(),
+                launch_arguments={
+                    'world': elfin10_l_ros2_gazebo,
+                    'params_file': gazebo_params_file,
+                }.items(),
              )
 
     # ***** ROBOT DESCRIPTION ***** #
@@ -61,12 +70,13 @@ def generate_launch_description():
     xacro_file = os.path.join(elfin10_l_description_path,
                               'urdf',
                               'elfin10_l.urdf.xacro')
-    # Generate ROBOT_DESCRIPTION for elfin10_l:
+    # Generate ROBOT_DESCRIPTION for elfin10_l (Gazebo setup):
     robot_description_config = Command(
         [FindExecutable(name='xacro'), ' ', xacro_file,
         ' use_fake_hardware:=false',
         ' use_real_hardware:=false',])
-    robot_description = {'robot_description': robot_description_config}
+    robot_description_gazebo = {'robot_description': robot_description_config}
+    
     # SPAWN ROBOT TO GAZEBO:
     spawn_entity = Node(package='gazebo_ros', executable='spawn_entity.py',
                         arguments=['-topic', 'robot_description',
@@ -88,33 +98,23 @@ def generate_launch_description():
         executable="robot_state_publisher",
         name="robot_state_publisher",
         output="both",
-        parameters=[robot_description,{'use_sim_time': True}],
+        parameters=[robot_description_gazebo, {'use_sim_time': True}],
     )
 
     # ***** CONTROLLERS ***** #
-    # elfin10_l arm controller:
-    # load_elfin_arm_controller = ExecuteProcess(
-    #     cmd=['ros2', 'control', 'load_start_controller', 'elfin_arm_controller'],
-    #     output='screen'
-    # )
     load_joint_trajectory_controller = ExecuteProcess(
         cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
              'elfin_arm_controller'],
         output='screen'
     )
 
-    # Joint STATE Controller:
-    # load_joint_state_broadcaster = ExecuteProcess(
-    #     cmd=['ros2', 'control', 'load_start_controller', 'joint_state_broadcaster'],
-    #     output='screen'
-    # )
     load_joint_state_broadcaster = ExecuteProcess(
         cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
              'joint_state_broadcaster'],
         output='screen'
     )
 
-    close_evt1 =  RegisterEventHandler( 
+    close_evt1 = RegisterEventHandler( 
             event_handler=OnProcessExit(
                 target_action=spawn_entity,
                 on_exit=[load_joint_state_broadcaster],
@@ -127,37 +127,6 @@ def generate_launch_description():
             )
     )
 
-
-    # ros2_control:
-    ros2_controllers_path = os.path.join(
-        get_package_share_directory("elfin10_l_ros2_gazebo"),
-        "config",
-        "elfin_arm_controller.yaml",
-    )
-    ros2_control_node = Node(
-        package="controller_manager",
-        executable="ros2_control_node",
-        parameters=[robot_description, ros2_controllers_path],
-        output={
-            "stdout": "screen",
-            "stderr": "screen",
-        },
-    )
-    # Load controllers: 
-    load_controllers = []
-    for controller in [
-        "elfin_arm_controller",
-        "joint_state_broadcaster",
-    ]:
-        load_controllers += [
-            ExecuteProcess(
-                cmd=["ros2 run controller_manager spawner {}".format(controller)],
-                shell=True,
-                output="screen",
-            )
-        ]
-
-
     # *********************** MoveIt!2 *********************** #   
     
     # Command-line argument: RVIZ file
@@ -166,15 +135,16 @@ def generate_launch_description():
     )
 
     # *** PLANNING CONTEXT *** #
-    # Robot description, URDF:
-    robot_description_config = xacro.process_file(
-        os.path.join(
-            get_package_share_directory("elfin10_l_ros2_gazebo"),
-            "urdf",
-            "elfin10_l.urdf.xacro",
-        )
+    # Robot description, URDF (Fixes Hardware Mismatch):
+    robot_description_config_moveit = xacro.process_file(
+        xacro_file,
+        mappings={
+            'use_real_hardware': 'false',
+            'use_fake_hardware': 'false'
+        }
     )
-    robot_description = {"robot_description": robot_description_config.toxml()}
+    robot_description_moveit = {"robot_description": robot_description_config_moveit.toxml()}
+    
     # Robot description, SRDF:
     robot_description_semantic_config = load_file(
         "elfin10_l_ros2_moveit2", "config/elfin10_l.srdf"
@@ -189,9 +159,10 @@ def generate_launch_description():
     )
 
     declare_use_sim_time_cmd = DeclareLaunchArgument(
-    name='use_sim_time',
-    default_value='True',
-    description='Use simulation (Gazebo) clock if true')
+        name='use_sim_time',
+        default_value='True',
+        description='Use simulation (Gazebo) clock if true'
+    )
 
     robot_description_kinematics = {"robot_description_kinematics": kinematics_yaml}
 
@@ -235,7 +206,7 @@ def generate_launch_description():
         executable="move_group",
         output="screen",
         parameters=[
-            robot_description,
+            robot_description_moveit,
             robot_description_semantic,
             kinematics_yaml,
             ompl_planning_pipeline_config,
@@ -257,7 +228,7 @@ def generate_launch_description():
         output="log",
         arguments=["-d", rviz_full_config],
         parameters=[
-            robot_description,
+            robot_description_moveit,
             robot_description_semantic,
             ompl_planning_pipeline_config,
             kinematics_yaml,
@@ -276,7 +247,7 @@ def generate_launch_description():
         executable='servo_node_main',
         parameters=[
             servo_params,
-            robot_description,
+            robot_description_moveit,
             robot_description_semantic,
             robot_description_kinematics,
             {'use_sim_time': True},
@@ -284,33 +255,28 @@ def generate_launch_description():
         output='screen',
     )
 
-    return LaunchDescription(
-        [
-            # Gazebo nodes:
-            gazebo, 
-            spawn_entity,
-            close_evt1,
-            close_evt2,
-            # ROS2_CONTROL:
-            static_tf,
-            robot_state_publisher,
-            # ros2_control_node,
-            
-            RegisterEventHandler(
-                OnProcessExit(
-                    target_action = spawn_entity,
-                    on_exit = [
-
-                        # MoveIt!2:
-                        rviz_arg,
-                        declare_use_sim_time_cmd,
-                        rviz_node_full,
-                        run_move_group_node,
-                        servo_node
-
-                    ]
-                )
+    return LaunchDescription([
+        # Gazebo nodes:
+        gazebo, 
+        spawn_entity,
+        close_evt1,
+        close_evt2,
+        
+        # ROS2_CONTROL & TF:
+        static_tf,
+        robot_state_publisher,
+        
+        # Start MoveIt!2 stack ONLY after the robot is spawned in Gazebo
+        RegisterEventHandler(
+            OnProcessExit(
+                target_action = spawn_entity,
+                on_exit = [
+                    rviz_arg,
+                    declare_use_sim_time_cmd,
+                    rviz_node_full,
+                    run_move_group_node,
+                    servo_node
+                ]
             )
-        ]
-        + load_controllers
-    )
+        )
+    ])
