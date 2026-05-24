@@ -114,6 +114,12 @@ def generate_launch_description():
         output='screen'
     )
 
+    load_servo_controller = ExecuteProcess(
+        cmd=['ros2', 'control', 'load_controller', '--set-state', 'inactive',
+             'elfin_servo_controller'],
+        output='screen'
+    )
+
     close_evt1 = RegisterEventHandler( 
             event_handler=OnProcessExit(
                 target_action=spawn_entity,
@@ -124,6 +130,12 @@ def generate_launch_description():
             event_handler=OnProcessExit(
                 target_action=load_joint_state_broadcaster,
                 on_exit=[load_joint_trajectory_controller],
+            )
+    )
+    close_evt3 = RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=load_joint_trajectory_controller,
+                on_exit=[load_servo_controller],
             )
     )
 
@@ -261,6 +273,7 @@ def generate_launch_description():
         spawn_entity,
         close_evt1,
         close_evt2,
+        close_evt3,
         
         # ROS2_CONTROL & TF:
         static_tf,

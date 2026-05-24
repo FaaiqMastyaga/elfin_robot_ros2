@@ -10,7 +10,7 @@
 
 controller_manager:
   ros__parameters:
-    update_rate: 250
+    update_rate: 2000
 
     elfin_arm_controller:
       type: joint_trajectory_controller/JointTrajectoryController
@@ -23,6 +23,16 @@ controller_manager:
         - elfin_joint6
       publish_rate: 50
       write_op_modes:
+        - elfin_joint1
+        - elfin_joint2
+        - elfin_joint3
+        - elfin_joint4
+        - elfin_joint5
+        - elfin_joint6
+
+    elfin_servo_controller:
+      type: position_controllers/JointGroupPositionController
+      joints:
         - elfin_joint1
         - elfin_joint2
         - elfin_joint3
@@ -44,7 +54,6 @@ elfin_arm_controller:
      - elfin_joint6
     command_interfaces:
       - position
-      - velocity
     state_interfaces:
       - position
       - velocity
@@ -60,3 +69,18 @@ elfin_arm_controller:
       elfin_joint4: { trajectory: 0.2, goal: 0.1 }
       elfin_joint5: { trajectory: 0.2, goal: 0.1 }
       elfin_joint6: { trajectory: 0.2, goal: 0.1 }
+
+elfin_servo_controller:
+  ros__parameters:
+    joints:
+     - elfin_joint1
+     - elfin_joint2
+     - elfin_joint3
+     - elfin_joint4
+     - elfin_joint5
+     - elfin_joint6
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity

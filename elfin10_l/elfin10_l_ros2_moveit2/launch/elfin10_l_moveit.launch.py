@@ -164,41 +164,10 @@ def generate_launch_description():
         output="screen",
         parameters=[robot_description],
     )
-
-    ros2_controllers_path = os.path.join(
-        get_package_share_directory("elfin_robot_bringup"),
-        "config",
-        "elfin_arm_control.yaml",
-    )
     
-    ros2_control_node = Node(
-        package="controller_manager",
-        executable="ros2_control_node",
-        parameters=[robot_description,ros2_controllers_path],
-        output={
-            "stdout": "screen",
-            "stderr": "screen",
-        },
-    )
-
-    # Load controllers
-    load_controllers = []
-    for controller in [
-        "elfin_arm_controller",
-        "joint_state_broadcaster",
-    ]:
-        load_controllers += [
-            ExecuteProcess(
-                cmd=["ros2 run controller_manager spawner.py {}".format(controller)],
-                shell=True,
-                output="screen",
-            )
-        ]
-
     return LaunchDescription(
         [   
             static_tf,
             robot_state_publisher,
-            ros2_control_node,
         ]
     )

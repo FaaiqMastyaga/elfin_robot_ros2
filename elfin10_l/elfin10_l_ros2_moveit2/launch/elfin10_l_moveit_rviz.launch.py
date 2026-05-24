@@ -202,19 +202,6 @@ def generate_launch_description():
     )
 
     # Load controllers
-    load_controllers = []
-    for controller in [
-        "elfin_arm_controller",
-        "joint_state_broadcaster",
-    ]:
-        load_controllers += [
-            ExecuteProcess(
-                cmd=["ros2 run controller_manager spawner.py {}".format(controller)],
-                shell=True,
-                output="screen",
-            )
-        ]
-
     elfin_controller_spawner = Node(
         package="controller_manager",
         executable="spawner",
@@ -227,15 +214,24 @@ def generate_launch_description():
         arguments=["joint_state_broadcaster", "--controller-manager", "/controller_manager"],
     )
 
+    elfin_servo_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["elfin_servo_controller", "--inactive", "--controller-manager", "/controller_manager"],
+    )
+
     return LaunchDescription(
         [   
             rviz_arg,
             rviz_node_full,
             run_move_group_node,
             servo_node,
+            ros2_control_node,
+            static_tf,
+            robot_state_publisher,
             elfin_controller_spawner,
-            joint_state_spawner
+            joint_state_spawner,
+            elfin_servo_spawner
 
         ]
-        + load_controllers
     )
