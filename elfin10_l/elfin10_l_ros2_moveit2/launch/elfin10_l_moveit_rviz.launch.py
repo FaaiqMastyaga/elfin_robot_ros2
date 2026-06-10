@@ -201,25 +201,6 @@ def generate_launch_description():
         # on_exit=Shutdown(),
     )
 
-    # Load controllers
-    elfin_controller_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=["elfin_arm_controller", "--controller-manager", "/controller_manager"],
-    )
-
-    joint_state_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=["joint_state_broadcaster", "--controller-manager", "/controller_manager"],
-    )
-
-    elfin_servo_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=["elfin_servo_controller", "--inactive", "--controller-manager", "/controller_manager"],
-    )
-
     return LaunchDescription(
         [   
             rviz_arg,
@@ -229,9 +210,5 @@ def generate_launch_description():
             ros2_control_node,
             static_tf,
             robot_state_publisher,
-            elfin_controller_spawner,
-            joint_state_spawner,
-            elfin_servo_spawner
-
         ]
     )
