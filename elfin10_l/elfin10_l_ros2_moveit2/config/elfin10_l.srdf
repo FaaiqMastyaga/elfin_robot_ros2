@@ -53,4 +53,5 @@
     <disable_collisions link1="elfin_link5" link2="elfin_link6" reason="Adjacent" />
     <disable_collisions link1="elfin_link6" link2="marker_holder_link" reason="Adjacent" />
     <disable_collisions link1="elfin_end_link" link2="marker_holder_link" reason="Adjacent" />
+    <disable_collisions link1="marker_holder_link" link2="pen_tip_link" reason="Adjacent" />
 </robot>
