@@ -1,17 +1,12 @@
 #!/usr/bin/python3
-
-# elfin10_l_moveit.launch.py:
-# Launch file for the elfin10_l Robot MoveIt!2 SIMULATION in ROS2 Humble:
-
-# Import libraries:
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.substitutions import LaunchConfiguration,Command, FindExecutable, PathJoinSubstitution
-from launch.actions import ExecuteProcess, IncludeLaunchDescription, RegisterEventHandler, DeclareLaunchArgument,Shutdown
+from launch.substitutions import LaunchConfiguration, Command, FindExecutable, PathJoinSubstitution
+from launch.actions import ExecuteProcess, IncludeLaunchDescription, RegisterEventHandler, DeclareLaunchArgument, Shutdown
 from launch.conditions import IfCondition, UnlessCondition
-from launch.event_handlers import OnProcessExit
+from launch.event_handlers import OnProcessStart, OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 import xacro
 import yaml
@@ -24,8 +19,8 @@ def load_file(package_name, file_path):
         with open(absolute_file_path, 'r') as file:
             return file.read()
     except EnvironmentError:
-
         return None
+
 # LOAD YAML:
 def load_yaml(package_name, file_path):
     package_path = get_package_share_directory(package_name)
@@ -38,10 +33,8 @@ def load_yaml(package_name, file_path):
 
 def generate_launch_description():
 
-    rviz_arg = DeclareLaunchArgument("rviz_file", default_value="False", description="Load RVIZ file.")
     # *** planning context *** #
-        
-    robot_description_config = (
+    robot_description_config_path = (
         os.path.join(
             get_package_share_directory("elfin10_l_ros2_gazebo"),
             "urdf",
@@ -50,7 +43,7 @@ def generate_launch_description():
     )
 
     robot_description_config = Command(
-        [FindExecutable(name='xacro'), ' ', robot_description_config,
+        [FindExecutable(name='xacro'), ' ', robot_description_config_path,
         ' use_fake_hardware:=false',
         ' use_real_hardware:=true',])
 
@@ -62,7 +55,7 @@ def generate_launch_description():
     )
 
     robot_description_semantic = {
-        "robot_description_semantic":robot_description_semantic_config
+        "robot_description_semantic": robot_description_semantic_config
     }
 
     # load kinematics.yaml
@@ -70,19 +63,19 @@ def generate_launch_description():
         "elfin10_l_ros2_moveit2", "config/kinematics.yaml"
     )
 
-    robot_description_kinematics = {"robot_description_kinematics":kinematics_yaml}
+    robot_description_kinematics = {"robot_description_kinematics": kinematics_yaml}
 
     # planning functionality
     ompl_planning_pipeline_config = {
-        "move_group":{
-        "planning_plugin": "ompl_interface/OMPLPlanner",
-        "request_adapters": """default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints""",
-        "start_state_max_bounds_error":0.1,
+        "move_group": {
+            "planning_plugin": "ompl_interface/OMPLPlanner",
+            "request_adapters": """default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints""",
+            "start_state_max_bounds_error": 0.1,
         }
     }
 
     ompl_planning_yaml = load_yaml(
-        "elfin10_l_ros2_moveit2","config/ompl_planning.yaml"
+        "elfin10_l_ros2_moveit2", "config/ompl_planning.yaml"
     )
 
     ompl_planning_pipeline_config["move_group"].update(ompl_planning_yaml)
@@ -113,9 +106,9 @@ def generate_launch_description():
 
     # start move_group & action server
     run_move_group_node = Node(
-        package = "moveit_ros_move_group",
-        executable = "move_group",
-        output = "screen",
+        package="moveit_ros_move_group",
+        executable="move_group",
+        output="screen",
         parameters=[
             robot_description,
             robot_description_semantic,
@@ -127,25 +120,6 @@ def generate_launch_description():
         ],
     )
 
-    # Rviz
-    load_rviz = LaunchConfiguration("rviz_file")
-    rviz_base = os.path.join(get_package_share_directory("elfin10_l_ros2_moveit2"),"launch")
-    rviz_full_config = os.path.join(rviz_base,"elfin10_l_moveit2.rviz")
-    rviz_node_full = Node(
-        package="rviz2",
-        executable="rviz2",
-        name="rviz2",
-        output="log",
-        arguments=["-d", rviz_full_config],
-        parameters=[
-            robot_description,
-            robot_description_semantic,
-            ompl_planning_pipeline_config,
-            kinematics_yaml,
-        ],
-        condition=UnlessCondition(load_rviz),
-    )
-
     # static tf
     static_tf = Node(
         package="tf2_ros",
@@ -153,10 +127,9 @@ def generate_launch_description():
         name="static_transform_publisher",
         output="log",
         arguments=["0.0", "0.0", "0.0", "0.0", "0.0", "0.0", "world", "elfin_base_link"],
-
     )
 
-    #publish tf
+    # publish tf
     robot_state_publisher = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
@@ -165,7 +138,43 @@ def generate_launch_description():
         parameters=[robot_description],
     )
 
+    # Servo node definition
+    servo_yaml = load_yaml(
+        'elfin10_l_ros2_moveit2', 'config/elfin_servo.yaml'
+    )
+    servo_params = {'moveit_servo': servo_yaml}
+
+    servo_node = Node(
+        package='moveit_servo',
+        executable='servo_node_main',
+        parameters=[
+            servo_params,
+            robot_description,
+            robot_description_semantic,
+            robot_description_kinematics,
+            {'use_sim_time': False},
+        ],
+        output='screen',
+        arguments=['--ros-args', '--log-level', 'ERROR']
+    )
+
     # Load controllers
+    ros2_controllers_path = os.path.join(
+        get_package_share_directory("elfin_robot_bringup"),
+        "config",
+        "elfin_arm_control.yaml",
+    )
+    
+    ros2_control_node = Node(
+        package="controller_manager",
+        executable="ros2_control_node",
+        parameters=[robot_description, ros2_controllers_path],
+        output={
+            "stdout": "screen",
+            "stderr": "screen",
+        },
+    )
+
     elfin_controller_spawner = Node(
         package="controller_manager",
         executable="spawner",
@@ -183,13 +192,38 @@ def generate_launch_description():
         executable="spawner",
         arguments=["elfin_servo_controller", "--inactive", "--controller-manager", "/controller_manager"],
     )
+
+    # Standard approach to delay spawners until control node is ready
+    delay_joint_state_spawner = RegisterEventHandler(
+        event_handler=OnProcessStart(
+            target_action=ros2_control_node,
+            on_start=[joint_state_spawner],
+        )
+    )
+
+    delay_elfin_controller_spawner = RegisterEventHandler(
+        event_handler=OnProcessStart(
+            target_action=ros2_control_node,
+            on_start=[elfin_controller_spawner],
+        )
+    )
+
+    delay_elfin_servo_spawner = RegisterEventHandler(
+        event_handler=OnProcessStart(
+            target_action=ros2_control_node,
+            on_start=[elfin_servo_spawner],
+        )
+    )
     
     return LaunchDescription(
         [   
             static_tf,
             robot_state_publisher,
-            elfin_controller_spawner,
-            joint_state_spawner,
-            elfin_servo_spawner
+            ros2_control_node,
+            delay_joint_state_spawner,
+            delay_elfin_controller_spawner,
+            delay_elfin_servo_spawner,
+            run_move_group_node,
+            servo_node
         ]
     )
